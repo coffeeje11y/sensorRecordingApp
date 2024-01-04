@@ -1,33 +1,33 @@
-package com.example.sensorapp
 
+import android.content.Context
 import android.os.Environment
-import androidx.work.ListenableWorker
+import androidx.work.Worker
+import androidx.work.WorkerParameters
 import java.io.BufferedWriter
 import java.io.FileWriter
 import java.io.PrintWriter
-
-class OtherFileStorageMagnet() {
+class OtherFileStorageMagnet (context: Context, workerParams: WorkerParameters) :
     Worker(context, workerParams) {
 
-        private val fileAppend = true
-        private var fileName: String = "SensorLog_linear_${inputData.getString("userName")}"
+    private val fileAppend = true
+    private var fileName: String = "SensorLog_magnetic_${inputData.getString("userName")}"
+    private val extension: String = ".csv"
+    private val filePath : String = context.applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS).toString().plus("/").plus(fileName).plus(extension)
+    override fun doWork(): Result {
+        // inputDataから"log"を取得
+        val log = inputData.getString("log") ?: ""
 
-        private val extension: String = ".csv"
-        private val filePath : String = context.applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS).toString().plus("/").plus(fileName).plus(extension)
-        override fun doWork(): ListenableWorker.Result {
-            // inputDataから"log"を取得
-            val log = inputData.getString("log") ?: ""
+        // ファイルへの書き込み処理
+        writeText(log)
 
-            // ファイルへの書き込み処理
-            writeText(log)
+        return Result.success()
+    }
 
-            return ListenableWorker.Result.success()
-        }
-
-        private fun writeText(log: String) {
-            val fil = FileWriter(filePath, fileAppend)
-            val pw = PrintWriter(BufferedWriter(fil))
-            pw.println(log)
-            pw.close()
-        }
+    private fun writeText(log: String) {
+        val fil = FileWriter(filePath, fileAppend)
+        val pw = PrintWriter(BufferedWriter(fil))
+        pw.println(log)
+        pw.close()
+    }
 }
+
