@@ -1,5 +1,6 @@
 package com.example.sensorapp
 
+import OtherFileStorageMagnet
 import OtherFileStoragegyroscope
 import OtherFileStoragelinear
 import android.content.Context
@@ -20,13 +21,17 @@ class SensorService(context: Context, workerParams: WorkerParameters) :
     private var sensorManager: SensorManager? = null
     private var gyroscope: Sensor? = null
     private var linearAcceleration: Sensor? = null
+    private var magnet: Sensor? = null
     private var userName: String = "DefaultName"
+
 
     override fun doWork(): Result {
         if (sensorManager == null) {
-            sensorManager = applicationContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            sensorManager =
+                applicationContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
             gyroscope = sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
             linearAcceleration = sensorManager?.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
+            magnet = sensorManager?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
             registerSensors()
         }
 
@@ -37,8 +42,9 @@ class SensorService(context: Context, workerParams: WorkerParameters) :
     }
 
     private fun registerSensors() {
-        sensorManager?.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_NORMAL)
-        sensorManager?.registerListener(this, linearAcceleration, SensorManager.SENSOR_DELAY_NORMAL)
+        sensorManager?.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME)
+        sensorManager?.registerListener(this, linearAcceleration, SensorManager.SENSOR_DELAY_GAME)
+        sensorManager?.registerListener(this, magnet, SensorManager.SENSOR_DELAY_GAME)
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
@@ -82,5 +88,29 @@ class SensorService(context: Context, workerParams: WorkerParameters) :
 
             WorkManager.getInstance(applicationContext).enqueue(linearAccelerationWorkRequest)
         }
+
+        if (event.sensor == magnet) {
+            // Handle Linear Acceleration Sensor Data
+            val xMag = event.values[0]
+            val yMag = event.values[1]
+            val zMag = event.values[2]
+            val timestamp = System.currentTimeMillis()
+
+            val logData = "$timestamp,$xMag,$yMag,$zMag"
+
+            val data = workDataOf("userName" to userName, "log" to logData)
+
+            val linearAccelerationWorkRequest = OneTimeWorkRequestBuilder<OtherFileStorageMagnet>()
+                .setInputData(data)
+                .addTag("MagneticWorkTag")
+                .build()
+            WorkManager.getInstance(applicationContext).enqueue(linearAccelerationWorkRequest)
+        }
     }
+    private fun stopRecording() {
+        sensorManager?.unregisterListener(this) // センサーリスナーの登録を解除
+        Log.d("SensorService", "Recording stopped.")
+
+    }
+
 }
