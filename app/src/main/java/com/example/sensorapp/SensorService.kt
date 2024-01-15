@@ -24,9 +24,11 @@ class SensorService(context: Context, workerParams: WorkerParameters) :
     private var magnet: Sensor? = null
     private var userName: String = "DefaultName"
 
+
     override fun doWork(): Result {
         if (sensorManager == null) {
-            sensorManager = applicationContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+            sensorManager =
+                applicationContext.getSystemService(Context.SENSOR_SERVICE) as SensorManager
             gyroscope = sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
             linearAcceleration = sensorManager?.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
             magnet = sensorManager?.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
@@ -40,9 +42,9 @@ class SensorService(context: Context, workerParams: WorkerParameters) :
     }
 
     private fun registerSensors() {
-        sensorManager?.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_NORMAL)
-        sensorManager?.registerListener(this, linearAcceleration, SensorManager.SENSOR_DELAY_NORMAL)
-        sensorManager?.registerListener(this, magnet, SensorManager.SENSOR_DELAY_NORMAL)
+        sensorManager?.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME)
+        sensorManager?.registerListener(this, linearAcceleration, SensorManager.SENSOR_DELAY_GAME)
+        sensorManager?.registerListener(this, magnet, SensorManager.SENSOR_DELAY_GAME)
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
@@ -102,8 +104,13 @@ class SensorService(context: Context, workerParams: WorkerParameters) :
                 .setInputData(data)
                 .addTag("MagneticWorkTag")
                 .build()
-
             WorkManager.getInstance(applicationContext).enqueue(linearAccelerationWorkRequest)
         }
     }
+    private fun stopRecording() {
+        sensorManager?.unregisterListener(this) // センサーリスナーの登録を解除
+        Log.d("SensorService", "Recording stopped.")
+
+    }
+
 }
