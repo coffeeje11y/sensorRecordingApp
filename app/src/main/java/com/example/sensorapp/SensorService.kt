@@ -3,6 +3,7 @@ package com.example.sensorapp
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
@@ -14,6 +15,10 @@ import android.os.Environment
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.BufferedWriter
 import java.io.FileWriter
 import java.io.PrintWriter
@@ -25,6 +30,8 @@ class SensorService : Service(), SensorEventListener {
     private var magnet: Sensor? = null
     private var userName: String = "DefaultName"
 
+    private val scope = CoroutineScope(Dispatchers.IO)
+
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
@@ -35,12 +42,18 @@ class SensorService : Service(), SensorEventListener {
             NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_MIN)
         )
 
-        notification = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setOngoing(true)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle(CHANNEL_NAME)
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java),
+            PendingIntent.FLAG_IMMUTABLE,
+        )
+
+        notification = NotificationCompat.Builder(this, CHANNEL_ID).setOngoing(true)
+            .setSmallIcon(R.drawable.ic_launcher_foreground).setContentTitle(CHANNEL_NAME)
             .setContentText("${intent?.extras?.getString("userName")} のデータを収集中")
-            .setPriority(NotificationManager.IMPORTANCE_DEFAULT)
+            .setPriority(NotificationManager.IMPORTANCE_DEFAULT).setContentIntent(pendingIntent)
+            .addAction(R.drawable.ic_launcher_foreground, "Stop Recording", null)
             .build()
 
         startForeground(1111, notification)
@@ -66,35 +79,47 @@ class SensorService : Service(), SensorEventListener {
         stopRecording()
     }
 
-    private fun writeGyroscopeText(context: Context, userName: String, log: String) {
-        val fileName = "SensorLog_gyroscope_${userName}"
-        val filePath : String = context.applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS).toString().plus("/").plus(fileName).plus(".csv")
+    private suspend fun writeGyroscopeText(context: Context, userName: String, log: String) =
+        withContext(Dispatchers.IO) {
+            val fileName = "SensorLog_gyroscope_${userName}"
+            val filePath: String =
+                context.applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+                    .toString().plus("/").plus(fileName).plus(".csv")
 
-        val fil = FileWriter(filePath, true)
-        val pw = PrintWriter(BufferedWriter(fil))
-        pw.println(log)
-        pw.close()
-    }
+            val fil = FileWriter(filePath, true)
+            val pw = PrintWriter(BufferedWriter(fil))
+            pw.println(log)
+            pw.close()
+        }
 
-    private fun writeLinearText(context: Context, userName: String, log: String) {
-        val fileName = "SensorLog_linear_${userName}"
-        val filePath : String = context.applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS).toString().plus("/").plus(fileName).plus(".csv")
+    private suspend fun writeLinearText(context: Context, userName: String, log: String) =
+        withContext(Dispatchers.IO) {
+            val fileName = "SensorLog_linear_${userName}"
+            val filePath: String = context.applicationContext
+                .getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+                .toString()
+                .plus("/")
+                .plus(fileName)
+                .plus(".csv")
 
-        val fil = FileWriter(filePath, true)
-        val pw = PrintWriter(BufferedWriter(fil))
-        pw.println(log)
-        pw.close()
-    }
+            val fil = FileWriter(filePath, true)
+            val pw = PrintWriter(BufferedWriter(fil))
+            pw.println(log)
+            pw.close()
+        }
 
-    private fun writeMagneticText(context: Context, userName: String, log: String) {
-        val fileName = "SensorLog_magnetic_${userName}"
-        val filePath : String = context.applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS).toString().plus("/").plus(fileName).plus(".csv")
+    private suspend fun writeMagneticText(context: Context, userName: String, log: String) =
+        withContext(Dispatchers.IO) {
+            val fileName = "SensorLog_magnetic_${userName}"
+            val filePath: String =
+                context.applicationContext.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
+                    .toString().plus("/").plus(fileName).plus(".csv")
 
-        val fil = FileWriter(filePath, true)
-        val pw = PrintWriter(BufferedWriter(fil))
-        pw.println(log)
-        pw.close()
-    }
+            val fil = FileWriter(filePath, true)
+            val pw = PrintWriter(BufferedWriter(fil))
+            pw.println(log)
+            pw.close()
+        }
 
     private fun registerSensors() {
         sensorManager?.registerListener(this, gyroscope, SensorManager.SENSOR_DELAY_GAME)
@@ -115,7 +140,9 @@ class SensorService : Service(), SensorEventListener {
 
             val logData = "$timestamp,$xGyroscope,$yGyroscope,$zGyroscope"
 
-            writeGyroscopeText(applicationContext, userName, logData)
+            scope.launch {
+                writeGyroscopeText(applicationContext, userName, logData)
+            }
         }
 
         if (event.sensor == linearAcceleration) {
@@ -127,7 +154,9 @@ class SensorService : Service(), SensorEventListener {
 
             val logData = "$timestamp,$xLinear,$yLinear,$zLinear"
 
-            writeLinearText(applicationContext, userName, logData)
+            scope.launch {
+                writeLinearText(applicationContext, userName, logData)
+            }
         }
 
         if (event.sensor == magnet) {
@@ -139,7 +168,9 @@ class SensorService : Service(), SensorEventListener {
 
             val logData = "$timestamp,$xMag,$yMag,$zMag"
 
-            writeMagneticText(applicationContext, userName, logData)
+            scope.launch {
+                writeMagneticText(applicationContext, userName, logData)
+            }
         }
     }
 
