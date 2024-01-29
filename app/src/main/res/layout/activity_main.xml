@@ -44,4 +44,11 @@
             android:backgroundTint="#FF0000"
             />
     </LinearLayout>
+
+    <Button
+        android:id="@+id/sendDataButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Send Data"
+        android:backgroundTint="#03A9F4"/>
 </LinearLayout>

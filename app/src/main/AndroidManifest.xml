@@ -19,6 +19,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SensorApp"
         tools:targetApi="33">
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.example.sensorapp.fileprovider"
+            android:grantUriPermissions="true"
+            android:exported="false">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/filepaths"/>
+        </provider>
         <activity
             android:name="com.example.sensorapp.MainActivity"
             android:exported="true">
